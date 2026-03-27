@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Gift, Wrench, Wallet, Store, ShoppingBag, Star, LogOut, TrendingUp } from 'lucide-react';
+import { Gift, Wrench, Wallet, Store, ShoppingBag, Star, LogOut, TrendingUp, ClipboardList, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import PageWrapper from '@/components/PageWrapper';
 import ActionCard from '@/components/ActionCard';
@@ -37,7 +37,13 @@ const Dashboard = () => {
     { icon: Store, label: 'Rewards', onClick: () => navigate('/rewards'), delay: 0.2 },
   ];
 
-  const actions = user.role === 'plumber' ? plumberActions : user.role === 'distributor' ? distributorActions : customerActions;
+  const retailerActions = [
+    { icon: ClipboardList, label: 'My Shop', onClick: () => navigate('/retailer'), variant: 'primary' as const, delay: 0.1 },
+    { icon: Wallet, label: 'Wallet', onClick: () => navigate('/wallet'), delay: 0.15 },
+    { icon: Store, label: 'Rewards', onClick: () => navigate('/rewards'), delay: 0.2 },
+  ];
+
+  const actions = user.role === 'plumber' ? plumberActions : user.role === 'distributor' ? distributorActions : user.role === 'retailer' ? retailerActions : customerActions;
 
   return (
     <PageWrapper>
