@@ -1,25 +1,60 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AppProvider } from "@/contexts/AppContext";
+import BottomNav from "@/components/BottomNav";
+import LoginPage from "@/pages/LoginPage";
+import Dashboard from "@/pages/Dashboard";
+import EarnPoints from "@/pages/EarnPoints";
+import WalletPage from "@/pages/WalletPage";
+import BookPlumber from "@/pages/BookPlumber";
+import PlumberJobs from "@/pages/PlumberJobs";
+import RewardsStore from "@/pages/RewardsStore";
+import DistributorMarket from "@/pages/DistributorMarket";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/earn" element={<ProtectedRoute><EarnPoints /></ProtectedRoute>} />
+        <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+        <Route path="/book-plumber" element={<ProtectedRoute><BookPlumber /></ProtectedRoute>} />
+        <Route path="/plumber-jobs" element={<ProtectedRoute><PlumberJobs /></ProtectedRoute>} />
+        <Route path="/rewards" element={<ProtectedRoute><RewardsStore /></ProtectedRoute>} />
+        <Route path="/market" element={<ProtectedRoute><DistributorMarket /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      {isAuthenticated && <BottomNav />}
+    </>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <AppProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AppProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
