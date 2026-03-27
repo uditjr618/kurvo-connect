@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'customer' | 'plumber' | 'distributor';
+export type UserRole = 'customer' | 'plumber' | 'distributor' | 'retailer';
 
 export interface User {
   id: string;
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name,
       phone,
       role,
-      points: role === 'plumber' ? 200 : role === 'distributor' ? 500 : 100,
+      points: role === 'plumber' ? 200 : role === 'distributor' ? 500 : role === 'retailer' ? 300 : 100,
     };
     setUser(newUser);
   };

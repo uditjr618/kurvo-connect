@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, User, ChevronRight, Shield, Droplets } from 'lucide-react';
+import { Phone, User, ChevronRight, Shield, Droplets, Store } from 'lucide-react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ const roles: { value: UserRole; label: string; icon: React.ReactNode; desc: stri
   { value: 'customer', label: 'Customer', icon: <User size={24} />, desc: 'Earn rewards & book services' },
   { value: 'plumber', label: 'Plumber', icon: <Droplets size={24} />, desc: 'Get jobs & earn income' },
   { value: 'distributor', label: 'Distributor', icon: <Shield size={24} />, desc: 'Manage shop supply chain' },
+  { value: 'retailer', label: 'Retailer / Shop', icon: <Store size={24} />, desc: 'Sell products & manage orders' },
 ];
 
 const LoginPage = () => {
