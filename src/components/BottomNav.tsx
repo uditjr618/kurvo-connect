@@ -10,9 +10,9 @@ const BottomNav = () => {
 
   const customerTabs = [
     { path: '/dashboard', icon: Home, label: 'Home' },
-    { path: '/earn', icon: Gift, label: 'Earn' },
+    { path: '/shops', icon: Store, label: 'Shops' },
+    { path: '/my-orders', icon: Gift, label: 'Orders' },
     { path: '/wallet', icon: Wallet, label: 'Wallet' },
-    { path: '/book-plumber', icon: Wrench, label: 'Plumber' },
     { path: '/rewards', icon: Store, label: 'Rewards' },
   ];
 
@@ -30,7 +30,14 @@ const BottomNav = () => {
     { path: '/rewards', icon: Gift, label: 'Rewards' },
   ];
 
-  const tabs = user?.role === 'plumber' ? plumberTabs : user?.role === 'distributor' ? distributorTabs : customerTabs;
+  const retailerTabs = [
+    { path: '/dashboard', icon: Home, label: 'Home' },
+    { path: '/retailer', icon: Store, label: 'My Shop' },
+    { path: '/wallet', icon: Wallet, label: 'Wallet' },
+    { path: '/rewards', icon: Gift, label: 'Rewards' },
+  ];
+
+  const tabs = user?.role === 'plumber' ? plumberTabs : user?.role === 'distributor' ? distributorTabs : user?.role === 'retailer' ? retailerTabs : customerTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-xl">

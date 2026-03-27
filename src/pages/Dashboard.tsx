@@ -21,8 +21,10 @@ const Dashboard = () => {
   const customerActions = [
     { icon: Gift, label: 'Earn Points', onClick: () => navigate('/earn'), delay: 0.1 },
     { icon: Wrench, label: 'Book Plumber', onClick: () => navigate('/book-plumber'), delay: 0.15 },
-    { icon: Wallet, label: 'Wallet', onClick: () => navigate('/wallet'), delay: 0.2 },
-    { icon: Store, label: 'Rewards Store', onClick: () => navigate('/rewards'), delay: 0.25 },
+    { icon: Store, label: 'Shop Now', onClick: () => navigate('/shops'), delay: 0.2 },
+    { icon: ShoppingCart, label: 'My Orders', onClick: () => navigate('/my-orders'), delay: 0.25 },
+    { icon: Wallet, label: 'Wallet', onClick: () => navigate('/wallet'), delay: 0.3 },
+    { icon: Gift, label: 'Rewards', onClick: () => navigate('/rewards'), delay: 0.35 },
   ];
 
   const plumberActions = [
