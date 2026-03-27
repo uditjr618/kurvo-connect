@@ -13,6 +13,10 @@ import BookPlumber from "@/pages/BookPlumber";
 import PlumberJobs from "@/pages/PlumberJobs";
 import RewardsStore from "@/pages/RewardsStore";
 import DistributorMarket from "@/pages/DistributorMarket";
+import RetailerDashboard from "@/pages/RetailerDashboard";
+import BrowseRetailers from "@/pages/BrowseRetailers";
+import RetailerProducts from "@/pages/RetailerProducts";
+import CustomerOrders from "@/pages/CustomerOrders";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +41,10 @@ const AppRoutes = () => {
         <Route path="/plumber-jobs" element={<ProtectedRoute><PlumberJobs /></ProtectedRoute>} />
         <Route path="/rewards" element={<ProtectedRoute><RewardsStore /></ProtectedRoute>} />
         <Route path="/market" element={<ProtectedRoute><DistributorMarket /></ProtectedRoute>} />
+        <Route path="/retailer" element={<ProtectedRoute><RetailerDashboard /></ProtectedRoute>} />
+        <Route path="/shops" element={<ProtectedRoute><BrowseRetailers /></ProtectedRoute>} />
+        <Route path="/shop/:shopId" element={<ProtectedRoute><RetailerProducts /></ProtectedRoute>} />
+        <Route path="/my-orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {isAuthenticated && <BottomNav />}

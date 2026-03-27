@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Phone, MessageCircle, Filter, CheckCircle2, Package, AlertTriangle, Store } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,8 @@ import { toast } from 'sonner';
 type FilterType = 'all' | 'Urgent' | 'Normal' | 'Low';
 
 const DistributorMarket = () => {
-  const { shops, updateShopStatus } = useApp();
+  const { updatePoints } = useAuth();
+  const { shops, updateShopStatus, addTransaction } = useApp();
   const [filter, setFilter] = useState<FilterType>('all');
   const [tab, setTab] = useState<'shops' | 'requirements'>('shops');
 
@@ -36,7 +38,10 @@ const DistributorMarket = () => {
 
   const handleFulfill = (id: string) => {
     updateShopStatus(id, 'fulfilled');
-    toast.success('Marked as fulfilled!');
+    const pts = 20;
+    updatePoints(pts);
+    addTransaction({ type: 'earn', amount: pts, description: 'Requirement fulfilled' });
+    toast.success(`Marked as fulfilled! +${pts} points`);
   };
 
   const handleContact = (phone: string, type: 'call' | 'whatsapp') => {
