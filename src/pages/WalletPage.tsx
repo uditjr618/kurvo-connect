@@ -1,65 +1,60 @@
+import { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Wallet as WalletIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowUpCircle, ArrowDownCircle, Wallet as WalletIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import PageWrapper from '@/components/PageWrapper';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+
+interface Txn { id: string; type: string; amount: number; description: string | null; created_at: string; }
 
 const WalletPage = () => {
-  const { user } = useAuth();
-  const { transactions } = useApp();
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const [txns, setTxns] = useState<Txn[] | null>(null);
 
-  if (!user) return null;
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('reward_transactions').select('*').eq('user_id', user.id)
+      .order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => setTxns((data as Txn[]) ?? []));
+  }, [user]);
 
   return (
-    <PageWrapper title="Wallet" subtitle="Your points and transactions">
-      <div className="px-5 py-4">
-        {/* Balance Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl gradient-hero p-6 text-primary-foreground"
-        >
+    <PageWrapper>
+      <div className="px-5 pt-6">
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft size={16} />Back</button>
+        <h1 className="text-2xl font-bold">Wallet</h1>
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl gradient-hero p-6 text-primary-foreground shadow-xl">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-              <WalletIcon size={24} />
-            </div>
-            <div>
-              <p className="text-sm opacity-80">Available Points</p>
-              <p className="text-3xl font-extrabold">{user.points.toLocaleString()}</p>
-            </div>
+            <WalletIcon size={24} />
+            <p className="text-sm opacity-80">Balance</p>
           </div>
+          <p className="mt-2 text-4xl font-extrabold">{profile?.points.toLocaleString() ?? 0} <span className="text-base font-medium opacity-80">points</span></p>
         </motion.div>
 
-        {/* Transactions */}
-        <h2 className="mt-6 mb-3 text-lg font-semibold text-foreground">Transaction History</h2>
-        {transactions.length === 0 ? (
-          <div className="rounded-xl bg-secondary/50 p-8 text-center">
-            <p className="text-sm text-muted-foreground">No transactions yet</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {transactions.map((t, i) => (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex items-center gap-3 rounded-xl bg-card p-4 elevated-card"
-              >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.type === 'earn' ? 'bg-accent/10' : 'bg-destructive/10'}`}>
-                  {t.type === 'earn' ? <ArrowUpCircle size={20} className="text-accent" /> : <ArrowDownCircle size={20} className="text-destructive" />}
+        <h2 className="mt-7 mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Transactions</h2>
+
+        <div className="space-y-2 pb-4">
+          {txns === null ? Array.from({length:4}).map((_,i)=><Skeleton key={i} className="h-16 rounded-xl" />) :
+            txns.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No transactions yet — start earning!</p> :
+            txns.map((t,i) => (
+              <motion.div key={t.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.03 }} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${t.type === 'earn' ? 'bg-accent/10 text-accent' : 'bg-destructive/10 text-destructive'}`}>
+                  {t.type === 'earn' ? <ArrowDownLeft size={18}/> : <ArrowUpRight size={18}/>}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{t.description ?? t.type}</p>
+                  <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</p>
                 </div>
-                <span className={`text-sm font-bold ${t.type === 'earn' ? 'text-accent' : 'text-destructive'}`}>
-                  {t.type === 'earn' ? '+' : '-'}{t.amount}
-                </span>
+                <p className={`font-semibold ${t.type === 'earn' ? 'text-accent' : 'text-destructive'}`}>{t.type === 'earn' ? '+' : '-'}{t.amount}</p>
               </motion.div>
-            ))}
-          </div>
-        )}
+            ))
+          }
+        </div>
       </div>
     </PageWrapper>
   );
