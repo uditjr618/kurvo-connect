@@ -39,7 +39,14 @@ const NotificationsBell = () => {
     const channel = supabase
       .channel('notif-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => setItems((p) => [payload.new as Notification, ...p]))
+        (payload) => {
+          const n = payload.new as Notification;
+          setItems((p) => [n, ...p]);
+          toast(n.title, {
+            description: n.body ?? undefined,
+            action: n.link ? { label: 'View', onClick: () => navigate(n.link!) } : undefined,
+          });
+        })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
