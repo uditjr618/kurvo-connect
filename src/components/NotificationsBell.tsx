@@ -14,10 +14,12 @@ interface Notification {
   body: string | null;
   is_read: boolean;
   created_at: string;
+  link?: string | null;
 }
 
 const NotificationsBell = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Notification[]>([]);
 
   const load = async () => {
