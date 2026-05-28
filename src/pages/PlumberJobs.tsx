@@ -1,111 +1,82 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, MapPin, Calendar, Check, X, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Clock, MapPin, Phone, Wrench, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
+import { awardPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
+interface Booking { id: string; customer_id: string; service_type: string; location: string; scheduled_date: string | null; scheduled_time: string | null; notes: string | null; status: string; created_at: string; plumber_id: string | null; }
+
 const PlumberJobs = () => {
-  const { user, updatePoints } = useAuth();
-  const { bookings, updateBookingStatus, addTransaction } = useApp();
+  const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
+  const [jobs, setJobs] = useState<Booking[] | null>(null);
 
-  if (!user) return null;
-
-  const handleAccept = (id: string) => {
-    updateBookingStatus(id, 'accepted');
-    toast.success('Job accepted!');
+  const load = async () => {
+    const { data } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+    setJobs((data as Booking[]) ?? []);
   };
 
-  const handleReject = (id: string) => {
-    updateBookingStatus(id, 'rejected');
-    toast.info('Job rejected');
-  };
+  useEffect(() => { load(); }, []);
 
-  const handleComplete = (id: string) => {
-    updateBookingStatus(id, 'completed');
-    const pts = Math.floor(Math.random() * 30) + 30;
-    updatePoints(pts);
-    addTransaction({ type: 'earn', amount: pts, description: 'Job completed bonus' });
-    toast.success(`Job completed! +${pts} points earned`);
-  };
-
-  const statusColor = (s: string) => {
-    switch (s) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700';
-      case 'accepted': return 'bg-primary/10 text-primary';
-      case 'rejected': return 'bg-destructive/10 text-destructive';
-      case 'completed': return 'bg-accent/10 text-accent';
-      default: return 'bg-secondary text-muted-foreground';
+  const update = async (id: string, status: string, reward = 0) => {
+    if (!user) return;
+    const patch: { status: string; plumber_id?: string } = { status };
+    if (status === 'accepted') patch.plumber_id = user.id;
+    const { error } = await supabase.from('bookings').update(patch).eq('id', id);
+    if (error) return toast.error(error.message);
+    if (reward > 0) {
+      await awardPoints(user.id, reward, 'Plumber job completed');
+      await notifySelf(`+${reward} points`, 'Job completed successfully');
+      await refreshProfile();
     }
+    toast.success(`Job ${status}`);
+    load();
   };
 
   return (
-    <PageWrapper title="My Jobs" subtitle="Incoming service requests">
-      <div className="px-5 py-4">
-        {/* Earnings card */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-5 flex items-center gap-4 rounded-2xl gradient-accent p-5 text-accent-foreground"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-            <Star size={24} />
-          </div>
-          <div>
-            <p className="text-sm opacity-80">Earnings Points</p>
-            <p className="text-2xl font-extrabold">{user.points.toLocaleString()}</p>
-          </div>
-        </motion.div>
+    <PageWrapper>
+      <div className="px-5 pt-6">
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft size={16}/>Back</button>
+        <h1 className="text-2xl font-bold">My Jobs</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Accept jobs to start earning points</p>
 
-        {bookings.length === 0 ? (
-          <div className="rounded-xl bg-secondary/50 p-8 text-center">
-            <Wrench size={40} className="mx-auto text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">No job requests yet</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {bookings.map((b, i) => (
-              <motion.div
-                key={b.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="rounded-xl bg-card p-4 elevated-card"
-              >
+        <div className="mt-5 space-y-3 pb-4">
+          {jobs === null ? Array.from({length:3}).map((_,i)=><Skeleton key={i} className="h-32 rounded-2xl"/>) :
+            jobs.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No jobs yet</p> :
+            jobs.map((j, i) => (
+              <motion.div key={j.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:i*0.04}} className="rounded-2xl border bg-card p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-foreground">{b.customerName}</h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{b.serviceType}</p>
+                    <p className="font-semibold">{j.service_type}</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={11}/>{j.location}</p>
+                    {j.scheduled_date && <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><Calendar size={11}/>{j.scheduled_date} {j.scheduled_time}</p>}
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColor(b.status)}`}>
-                    {b.status}
-                  </span>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${
+                    j.status==='pending'?'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400':
+                    j.status==='accepted'?'bg-blue-500/10 text-blue-700 dark:text-blue-400':
+                    j.status==='completed'?'bg-accent/10 text-accent':'bg-destructive/10 text-destructive'
+                  }`}>{j.status}</span>
                 </div>
-                <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5"><MapPin size={12} />{b.location}</div>
-                  <div className="flex items-center gap-1.5"><Clock size={12} />{b.date} at {b.time}</div>
-                  <div className="flex items-center gap-1.5"><Phone size={12} />{b.customerPhone}</div>
+                {j.notes && <p className="mt-2 text-xs text-muted-foreground italic">"{j.notes}"</p>}
+                <div className="mt-3 flex gap-2">
+                  {j.status === 'pending' && <>
+                    <Button size="sm" onClick={() => update(j.id, 'accepted')} className="flex-1 gradient-primary border-0 text-primary-foreground"><Check size={14} className="mr-1"/>Accept</Button>
+                    <Button size="sm" variant="outline" onClick={() => update(j.id, 'rejected')} className="flex-1"><X size={14} className="mr-1"/>Reject</Button>
+                  </>}
+                  {j.status === 'accepted' && j.plumber_id === user?.id && (
+                    <Button size="sm" onClick={() => update(j.id, 'completed', 100)} className="flex-1 gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Complete (+100)</Button>
+                  )}
                 </div>
-                {b.status === 'pending' && (
-                  <div className="mt-3 flex gap-2">
-                    <Button size="sm" onClick={() => handleAccept(b.id)} className="flex-1 gradient-primary border-0 text-primary-foreground touch-target">
-                      <CheckCircle size={14} className="mr-1" /> Accept
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleReject(b.id)} className="flex-1 touch-target">
-                      <XCircle size={14} className="mr-1" /> Reject
-                    </Button>
-                  </div>
-                )}
-                {b.status === 'accepted' && (
-                  <Button size="sm" onClick={() => handleComplete(b.id)} className="mt-3 w-full gradient-accent border-0 text-accent-foreground touch-target">
-                    Mark Complete
-                  </Button>
-                )}
               </motion.div>
-            ))}
-          </div>
-        )}
+            ))
+          }
+        </div>
       </div>
     </PageWrapper>
   );

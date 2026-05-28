@@ -1,218 +1,174 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Package, ClipboardList, ShoppingCart, Plus, CheckCircle2, XCircle, Truck, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Trash2, Package, ClipboardList, ShoppingBag, Sparkles, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
+import { awardPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+interface Product { id: string; name: string; price: number; stock: number; description: string | null; is_available: boolean; }
+interface Order { id: string; total: number; status: string; created_at: string; address: string | null; delivery_type: string; order_items: { product_name: string; quantity: number }[]; }
+interface Requirement { id: string; product_name: string; quantity: number; urgency: string; status: string; notes: string | null; }
+
 const RetailerDashboard = () => {
-  const { user, updatePoints } = useAuth();
-  const { shops, addShopRequirement, orders, updateOrderStatus, addTransaction } = useApp();
-  const [tab, setTab] = useState<'requirements' | 'orders' | 'post'>('requirements');
+  const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [reqs, setReqs] = useState<Requirement[] | null>(null);
+  const [pOpen, setPOpen] = useState(false);
+  const [rOpen, setROpen] = useState(false);
+  const [newP, setNewP] = useState({ name:'', price:'', stock:'', description:'' });
+  const [newR, setNewR] = useState({ product_name:'', quantity:'', urgency:'normal', notes:'' });
 
-  // Post requirement form state
-  const [product, setProduct] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [urgency, setUrgency] = useState<'Low' | 'Normal' | 'Urgent'>('Normal');
-  const [notes, setNotes] = useState('');
-  const [location, setLocation] = useState('');
+  const load = async () => {
+    if (!user) return;
+    const [{ data: p }, { data: o }, { data: r }] = await Promise.all([
+      supabase.from('products').select('*').eq('retailer_id', user.id).order('created_at',{ascending:false}),
+      supabase.from('orders').select('*, order_items(product_name, quantity)').eq('retailer_id', user.id).order('created_at',{ascending:false}),
+      supabase.from('requirements').select('*').eq('retailer_id', user.id).order('created_at',{ascending:false}),
+    ]);
+    setProducts((p as Product[]) ?? []);
+    setOrders((o as unknown as Order[]) ?? []);
+    setReqs((r as Requirement[]) ?? []);
+  };
+  useEffect(() => { load(); }, [user]);
 
-  if (!user) return null;
-
-  const myRequirements = shops.filter(s => s.retailerId === user.id);
-  const myOrders = orders.filter(o => o.retailerName === user.name);
-
-  const handlePostRequirement = () => {
-    if (!product.trim() || !quantity) return;
-    addShopRequirement({
-      shopName: user.name,
-      shopDistance: '0 km',
-      shopContact: user.phone,
-      demandLevel: urgency === 'Urgent' ? 'High' : urgency === 'Normal' ? 'Medium' : 'Low',
-      product: product.trim(),
-      quantity: parseInt(quantity),
-      urgency,
-      retailerId: user.id,
-      location: location || 'Not specified',
-      notes,
+  const addProduct = async () => {
+    if (!user || !newP.name || !newP.price) return toast.error('Name and price required');
+    const { error } = await supabase.from('products').insert({
+      retailer_id: user.id, name: newP.name, price: Number(newP.price), stock: Number(newP.stock||0), description: newP.description,
     });
-    toast.success('Requirement posted!');
-    setProduct('');
-    setQuantity('');
-    setUrgency('Normal');
-    setNotes('');
-    setLocation('');
-    setTab('requirements');
+    if (error) return toast.error(error.message);
+    toast.success('Product added'); setPOpen(false); setNewP({name:'',price:'',stock:'',description:''}); load();
   };
 
-  const handleAcceptOrder = (id: string) => {
-    updateOrderStatus(id, 'accepted');
-    toast.success('Order accepted!');
+  const deleteProduct = async (id: string) => {
+    await supabase.from('products').delete().eq('id', id);
+    load();
   };
 
-  const handleRejectOrder = (id: string) => {
-    updateOrderStatus(id, 'rejected');
-    toast.info('Order rejected');
+  const addRequirement = async () => {
+    if (!user || !newR.product_name || !newR.quantity) return toast.error('Product and quantity required');
+    const { error } = await supabase.from('requirements').insert({
+      retailer_id: user.id, product_name: newR.product_name, quantity: Number(newR.quantity), urgency: newR.urgency, notes: newR.notes,
+    });
+    if (error) return toast.error(error.message);
+    toast.success('Requirement posted'); setROpen(false); setNewR({product_name:'',quantity:'',urgency:'normal',notes:''}); load();
   };
 
-  const handleDeliverOrder = (id: string) => {
-    updateOrderStatus(id, 'delivered');
-    const pts = 15;
-    updatePoints(pts);
-    addTransaction({ type: 'earn', amount: pts, description: 'Order delivered' });
-    toast.success(`Order delivered! +${pts} points`);
-  };
-
-  const statusColor = (s: string) => {
-    switch (s) {
-      case 'open': case 'pending': return 'bg-yellow-100 text-yellow-700';
-      case 'accepted': return 'bg-primary/10 text-primary';
-      case 'fulfilled': case 'delivered': return 'bg-accent/10 text-accent';
-      case 'rejected': return 'bg-destructive/10 text-destructive';
-      default: return 'bg-secondary text-muted-foreground';
-    }
+  const updateOrder = async (id: string, status: string, reward = 0) => {
+    if (!user) return;
+    await supabase.from('orders').update({ status }).eq('id', id);
+    if (reward > 0) { await awardPoints(user.id, reward, `Order ${id.slice(0,8)} delivered`); await notifySelf(`+${reward} points`, 'Order delivered'); await refreshProfile(); }
+    toast.success(`Order ${status}`); load();
   };
 
   return (
-    <PageWrapper title="My Shop" subtitle="Manage requirements & orders">
-      <div className="px-5 py-4">
-        {/* Tabs */}
-        <div className="mb-4 flex rounded-xl bg-secondary p-1">
-          {[
-            { key: 'requirements' as const, label: 'Requirements', icon: ClipboardList },
-            { key: 'orders' as const, label: 'Orders', icon: ShoppingCart },
-            { key: 'post' as const, label: 'Post', icon: Plus },
-          ].map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-semibold transition-all ${
-                tab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-              }`}
-            >
-              <t.icon size={14} />
-              {t.label}
-            </button>
-          ))}
-        </div>
+    <PageWrapper>
+      <div className="px-5 pt-6">
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft size={16}/>Back</button>
+        <h1 className="text-2xl font-bold">My Shop</h1>
 
-        <AnimatePresence mode="wait">
-          {tab === 'post' && (
-            <motion.div key="post" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Product Name</label>
-                <Input placeholder="e.g. CPVC Pipe 1 inch" value={product} onChange={e => setProduct(e.target.value)} className="h-12" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Quantity</label>
-                <Input type="number" placeholder="e.g. 50" value={quantity} onChange={e => setQuantity(e.target.value)} className="h-12" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Urgency</label>
-                <div className="flex gap-2">
-                  {(['Low', 'Normal', 'Urgent'] as const).map(u => (
-                    <button
-                      key={u}
-                      onClick={() => setUrgency(u)}
-                      className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-all ${
-                        urgency === u
-                          ? u === 'Urgent' ? 'border-destructive bg-destructive/10 text-destructive'
-                            : u === 'Normal' ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-accent bg-accent/10 text-accent'
-                          : 'border-border text-muted-foreground'
-                      }`}
-                    >
-                      {u === 'Urgent' && <AlertTriangle size={12} className="inline mr-1" />}
-                      {u}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Location</label>
-                <Input placeholder="Shop location" value={location} onChange={e => setLocation(e.target.value)} className="h-12" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Notes (optional)</label>
-                <Input placeholder="Any additional details" value={notes} onChange={e => setNotes(e.target.value)} className="h-12" />
-              </div>
-              <Button onClick={handlePostRequirement} disabled={!product.trim() || !quantity} className="h-12 w-full text-base font-semibold gradient-primary border-0 text-primary-foreground">
-                <Package size={18} className="mr-2" /> Post Requirement
-              </Button>
-            </motion.div>
-          )}
+        <Tabs defaultValue="products" className="mt-4">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="products"><Package size={14} className="mr-1"/>Products</TabsTrigger>
+            <TabsTrigger value="orders"><ShoppingBag size={14} className="mr-1"/>Orders</TabsTrigger>
+            <TabsTrigger value="reqs"><ClipboardList size={14} className="mr-1"/>Stock</TabsTrigger>
+          </TabsList>
 
-          {tab === 'requirements' && (
-            <motion.div key="reqs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-              {myRequirements.length === 0 ? (
-                <div className="py-16 text-center">
-                  <ClipboardList size={40} className="mx-auto text-muted-foreground" />
-                  <p className="mt-3 text-sm text-muted-foreground">No requirements posted yet</p>
-                  <Button onClick={() => setTab('post')} variant="outline" className="mt-4">Post Requirement</Button>
+          <TabsContent value="products" className="mt-4 space-y-3 pb-4">
+            <Dialog open={pOpen} onOpenChange={setPOpen}>
+              <DialogTrigger asChild><Button className="w-full gradient-primary border-0 text-primary-foreground"><Plus size={16} className="mr-1"/>Add Product</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Name</Label><Input value={newP.name} onChange={e=>setNewP({...newP, name:e.target.value})} className="mt-1"/></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Price (₹)</Label><Input type="number" value={newP.price} onChange={e=>setNewP({...newP, price:e.target.value})} className="mt-1"/></div>
+                    <div><Label>Stock</Label><Input type="number" value={newP.stock} onChange={e=>setNewP({...newP, stock:e.target.value})} className="mt-1"/></div>
+                  </div>
+                  <div><Label>Description</Label><Textarea value={newP.description} onChange={e=>setNewP({...newP, description:e.target.value})} className="mt-1" rows={2}/></div>
+                  <Button onClick={addProduct} className="w-full">Save</Button>
                 </div>
-              ) : (
-                myRequirements.map((r, i) => (
-                  <motion.div key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-xl bg-card p-4 elevated-card">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{r.product}</h3>
-                        <p className="text-xs text-muted-foreground">Qty: {r.quantity} · {r.urgency}</p>
-                        {r.notes && <p className="mt-1 text-xs text-muted-foreground italic">{r.notes}</p>}
-                      </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor(r.status)}`}>
-                        {r.status === 'open' ? 'Pending' : r.status === 'accepted' ? 'Accepted' : 'Completed'}
-                      </span>
+              </DialogContent>
+            </Dialog>
+            {products === null ? Array.from({length:2}).map((_,i)=><Skeleton key={i} className="h-20 rounded-2xl"/>) :
+              products.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No products yet. Add your first product!</p> :
+              products.map(p => (
+                <div key={p.id} className="flex items-center gap-3 rounded-2xl border bg-card p-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">₹{Number(p.price).toFixed(0)} · Stock: {p.stock}</p>
+                  </div>
+                  <button onClick={() => deleteProduct(p.id)} className="text-destructive p-2"><Trash2 size={16}/></button>
+                </div>
+              ))
+            }
+          </TabsContent>
+
+          <TabsContent value="orders" className="mt-4 space-y-3 pb-4">
+            {orders === null ? Array.from({length:2}).map((_,i)=><Skeleton key={i} className="h-24 rounded-2xl"/>) :
+              orders.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No customer orders yet</p> :
+              orders.map(o => (
+                <motion.div key={o.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} className="rounded-2xl border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">#{o.id.slice(0,8)} · ₹{Number(o.total).toFixed(0)} · {o.delivery_type}</p>
+                  <p className="mt-1 text-sm">{o.order_items.map(i=>`${i.product_name}×${i.quantity}`).join(', ')}</p>
+                  {o.address && <p className="text-xs text-muted-foreground mt-0.5">📍 {o.address}</p>}
+                  <div className="mt-3 flex gap-2">
+                    {o.status==='pending' && <>
+                      <Button size="sm" onClick={()=>updateOrder(o.id, 'accepted')} className="flex-1 gradient-primary border-0 text-primary-foreground">Accept</Button>
+                      <Button size="sm" variant="outline" onClick={()=>updateOrder(o.id, 'rejected')} className="flex-1">Reject</Button>
+                    </>}
+                    {o.status==='accepted' && <Button size="sm" onClick={()=>updateOrder(o.id,'delivered',50)} className="w-full gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Delivered (+50)</Button>}
+                    {(o.status==='delivered'||o.status==='rejected') && <span className="text-xs text-muted-foreground"><Check size={12} className="inline mr-1"/>{o.status}</span>}
+                  </div>
+                </motion.div>
+              ))
+            }
+          </TabsContent>
+
+          <TabsContent value="reqs" className="mt-4 space-y-3 pb-4">
+            <Dialog open={rOpen} onOpenChange={setROpen}>
+              <DialogTrigger asChild><Button className="w-full gradient-primary border-0 text-primary-foreground"><Plus size={16} className="mr-1"/>Post Stock Requirement</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>New Requirement</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Product</Label><Input value={newR.product_name} onChange={e=>setNewR({...newR, product_name:e.target.value})} className="mt-1"/></div>
+                  <div><Label>Quantity</Label><Input type="number" value={newR.quantity} onChange={e=>setNewR({...newR, quantity:e.target.value})} className="mt-1"/></div>
+                  <div><Label>Urgency</Label>
+                    <div className="mt-1 flex gap-2">
+                      {['low','normal','urgent'].map(u => <button key={u} onClick={()=>setNewR({...newR,urgency:u})} className={`flex-1 rounded-lg border-2 px-3 py-2 text-xs font-medium capitalize ${newR.urgency===u?'border-primary bg-primary/5 text-primary':'border-border'}`}>{u}</button>)}
                     </div>
-                  </motion.div>
-                ))
-              )}
-            </motion.div>
-          )}
-
-          {tab === 'orders' && (
-            <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-              {myOrders.length === 0 ? (
-                <div className="py-16 text-center">
-                  <ShoppingCart size={40} className="mx-auto text-muted-foreground" />
-                  <p className="mt-3 text-sm text-muted-foreground">No orders yet</p>
+                  </div>
+                  <div><Label>Notes</Label><Textarea value={newR.notes} onChange={e=>setNewR({...newR, notes:e.target.value})} className="mt-1" rows={2}/></div>
+                  <Button onClick={addRequirement} className="w-full">Post</Button>
                 </div>
-              ) : (
-                myOrders.map((o, i) => (
-                  <motion.div key={o.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-xl bg-card p-4 elevated-card">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{o.product}</h3>
-                        <p className="text-xs text-muted-foreground">{o.customerName} · Qty: {o.quantity}</p>
-                        <p className="text-xs text-muted-foreground">{o.deliveryType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}</p>
-                      </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor(o.status)}`}>
-                        {o.status}
-                      </span>
-                    </div>
-                    {o.status === 'pending' && (
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" onClick={() => handleAcceptOrder(o.id)} className="flex-1 gradient-primary border-0 text-primary-foreground text-xs">
-                          <CheckCircle2 size={12} className="mr-1" /> Accept
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleRejectOrder(o.id)} className="flex-1 text-xs text-destructive border-destructive/30">
-                          <XCircle size={12} className="mr-1" /> Reject
-                        </Button>
-                      </div>
-                    )}
-                    {o.status === 'accepted' && (
-                      <Button size="sm" onClick={() => handleDeliverOrder(o.id)} className="mt-3 w-full gradient-accent border-0 text-accent-foreground text-xs">
-                        <Truck size={12} className="mr-1" /> Mark Delivered
-                      </Button>
-                    )}
-                  </motion.div>
-                ))
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </DialogContent>
+            </Dialog>
+            {reqs === null ? Array.from({length:2}).map((_,i)=><Skeleton key={i} className="h-20 rounded-2xl"/>) :
+              reqs.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No requirements yet</p> :
+              reqs.map(r => (
+                <div key={r.id} className="rounded-2xl border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">{r.product_name}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${r.urgency==='urgent'?'bg-destructive/10 text-destructive':r.urgency==='normal'?'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400':'bg-secondary text-muted-foreground'}`}>{r.urgency}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Qty: {r.quantity} · {r.status}</p>
+                </div>
+              ))
+            }
+          </TabsContent>
+        </Tabs>
       </div>
     </PageWrapper>
   );

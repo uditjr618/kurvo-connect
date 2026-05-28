@@ -1,71 +1,67 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Gift, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Gift, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
+import { awardPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
-const rewards = [
-  { id: 'r1', name: '₹50 Cashback', points: 100, emoji: '💰' },
-  { id: 'r2', name: '₹100 Cashback', points: 200, emoji: '💸' },
-  { id: 'r3', name: 'Tool Kit', points: 500, emoji: '🔧' },
-  { id: 'r4', name: 'Water Bottle', points: 80, emoji: '🧴' },
-  { id: 'r5', name: '₹500 Gift Card', points: 1000, emoji: '🎁' },
-  { id: 'r6', name: 'Safety Gloves', points: 150, emoji: '🧤' },
-];
+interface Reward { id: string; title: string; description: string | null; points_cost: number; }
 
 const RewardsStore = () => {
-  const { user, updatePoints } = useAuth();
-  const { addTransaction } = useApp();
+  const navigate = useNavigate();
+  const { user, profile, refreshProfile } = useAuth();
+  const [rewards, setRewards] = useState<Reward[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  if (!user) return null;
+  useEffect(() => {
+    supabase.from('rewards').select('*').eq('is_active', true).order('points_cost').then(({ data }) => setRewards((data as Reward[]) ?? []));
+  }, []);
 
-  const handleRedeem = (reward: typeof rewards[0]) => {
-    if (user.points < reward.points) {
-      toast.error('Not enough points!');
-      return;
-    }
-    updatePoints(-reward.points);
-    addTransaction({ type: 'redeem', amount: reward.points, description: `Redeemed: ${reward.name}` });
-    toast.success(`${reward.name} redeemed successfully!`);
+  const redeem = async (r: Reward) => {
+    if (!user || !profile) return;
+    if (profile.points < r.points_cost) return toast.error('Not enough points');
+    setBusy(r.id);
+    try {
+      await awardPoints(user.id, -r.points_cost, `Redeemed: ${r.title}`);
+      await notifySelf('Reward Redeemed', r.title);
+      await refreshProfile();
+      toast.success(`Redeemed ${r.title}!`);
+    } finally { setBusy(null); }
   };
 
   return (
-    <PageWrapper title="Rewards Store" subtitle="Redeem your points for rewards">
-      <div className="px-5 py-4">
-        {/* Points banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-5 flex items-center gap-3 rounded-xl bg-primary/10 p-4"
-        >
-          <Gift size={20} className="text-primary" />
-          <span className="text-sm font-medium text-foreground">Your balance: <strong>{user.points.toLocaleString()} pts</strong></span>
-        </motion.div>
+    <PageWrapper>
+      <div className="px-5 pt-6">
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft size={16}/>Back</button>
+        <h1 className="text-2xl font-bold">Rewards Store</h1>
+        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+          <Star size={14}/> {profile?.points ?? 0} points
+        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {rewards.map((r, i) => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="flex flex-col items-center rounded-xl bg-card p-5 elevated-card"
-            >
-              <span className="text-4xl">{r.emoji}</span>
-              <h3 className="mt-3 text-sm font-semibold text-foreground text-center">{r.name}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">{r.points} pts</p>
-              <Button
-                size="sm"
-                onClick={() => handleRedeem(r)}
-                disabled={user.points < r.points}
-                className="mt-3 w-full gradient-primary border-0 text-primary-foreground text-xs touch-target"
-              >
-                Redeem
-              </Button>
-            </motion.div>
-          ))}
+        <div className="mt-5 grid grid-cols-2 gap-3 pb-4">
+          {rewards === null ? Array.from({length:6}).map((_,i)=><Skeleton key={i} className="h-44 rounded-2xl"/>) :
+            rewards.map((r, i) => {
+              const can = (profile?.points ?? 0) >= r.points_cost;
+              return (
+                <motion.div key={r.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.04}} className="rounded-2xl border bg-card p-4 flex flex-col">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl gradient-accent text-accent-foreground"><Gift size={24}/></div>
+                  <p className="mt-3 font-semibold text-sm leading-tight">{r.title}</p>
+                  {r.description && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{r.description}</p>}
+                  <div className="mt-3 mb-2 flex items-center gap-1 text-sm font-bold text-primary">
+                    <Star size={12}/> {r.points_cost}
+                  </div>
+                  <Button size="sm" disabled={!can || busy === r.id} onClick={() => redeem(r)} className="mt-auto gradient-primary border-0 text-primary-foreground">
+                    {busy === r.id ? '…' : can ? 'Redeem' : 'Locked'}
+                  </Button>
+                </motion.div>
+              );
+            })
+          }
         </div>
       </div>
     </PageWrapper>

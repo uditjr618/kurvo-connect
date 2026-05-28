@@ -1,114 +1,88 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, QrCode, Keyboard, CheckCircle2, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Upload, QrCode, Hash, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
+import { awardPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-const EarnPoints = () => {
-  const { updatePoints } = useAuth();
-  const { addTransaction } = useApp();
-  const [method, setMethod] = useState<'bill' | 'code' | 'qr' | null>(null);
-  const [productCode, setProductCode] = useState('');
-  const [billUploaded, setBillUploaded] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+const methods = [
+  { id: 'bill', icon: Upload, title: 'Upload Bill', desc: 'Scan/upload a purchase bill', points: 50 },
+  { id: 'code', icon: Hash, title: 'Product Code', desc: 'Enter code from packaging', points: 30 },
+  { id: 'qr', icon: QrCode, title: 'Scan QR', desc: 'Simulate a product QR scan', points: 40 },
+];
 
-  const submitEarn = (desc: string) => {
-    const pts = Math.floor(Math.random() * 50) + 20;
-    updatePoints(pts);
-    addTransaction({ type: 'earn', amount: pts, description: desc });
-    setShowSuccess(true);
-    toast.success(`+${pts} points earned!`);
-    setTimeout(() => { setShowSuccess(false); setMethod(null); setProductCode(''); setBillUploaded(false); }, 2000);
+const EarnPoints = () => {
+  const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
+  const [active, setActive] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const earn = async (id: string, amount: number, desc: string) => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      await awardPoints(user.id, amount, desc);
+      await notifySelf(`+${amount} points earned`, desc);
+      await refreshProfile();
+      toast.success(`+${amount} points earned!`);
+      setActive(null); setCode('');
+    } catch (e) {
+      toast.error('Failed to earn points');
+    } finally { setBusy(false); }
   };
 
-  const methods = [
-    { id: 'bill' as const, icon: Upload, label: 'Upload Bill', desc: 'Scan your purchase bill' },
-    { id: 'code' as const, icon: Keyboard, label: 'Product Code', desc: 'Enter code from product' },
-    { id: 'qr' as const, icon: QrCode, label: 'Scan QR', desc: 'Scan product QR code' },
-  ];
-
   return (
-    <PageWrapper title="Earn Points" subtitle="Choose how to earn reward points">
-      <div className="px-5 py-4">
-        <AnimatePresence mode="wait">
-          {showSuccess ? (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-16">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent/10">
-                <CheckCircle2 size={48} className="text-accent" />
+    <PageWrapper>
+      <div className="px-5 pt-6">
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft size={16}/>Back</button>
+        <h1 className="text-2xl font-bold">Earn Points</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Choose how you'd like to earn today</p>
+
+        <div className="mt-5 space-y-3">
+          {methods.map((m, i) => (
+            <motion.button
+              key={m.id}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }}
+              onClick={() => setActive(active === m.id ? null : m.id)}
+              className={`flex w-full items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all ${active===m.id ? 'border-primary bg-primary/5':'border-border bg-card hover:border-primary/30'}`}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><m.icon size={22}/></div>
+              <div className="flex-1">
+                <p className="font-semibold">{m.title}</p>
+                <p className="text-xs text-muted-foreground">{m.desc}</p>
               </div>
-              <h2 className="mt-4 text-xl font-bold text-foreground">Points Earned!</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Check your wallet for details</p>
-            </motion.div>
-          ) : !method ? (
-            <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-              {methods.map((m, i) => (
-                <motion.button
-                  key={m.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  onClick={() => setMethod(m.id)}
-                  className="flex w-full items-center gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 touch-target elevated-card"
-                >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                    <m.icon size={24} className="text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-foreground">{m.label}</div>
-                    <div className="text-xs text-muted-foreground">{m.desc}</div>
-                  </div>
-                </motion.button>
-              ))}
-            </motion.div>
-          ) : method === 'bill' ? (
-            <motion.div key="bill" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-              <div
-                onClick={() => setBillUploaded(true)}
-                className={`flex h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${billUploaded ? 'border-accent bg-accent/5' : 'border-border bg-secondary/50 hover:border-primary/30'}`}
-              >
-                {billUploaded ? (
-                  <>
-                    <CheckCircle2 size={40} className="text-accent" />
-                    <p className="mt-2 text-sm font-medium text-accent">Bill uploaded</p>
-                  </>
-                ) : (
-                  <>
-                    <Camera size={40} className="text-muted-foreground" />
-                    <p className="mt-2 text-sm text-muted-foreground">Tap to upload or take photo</p>
-                  </>
-                )}
-              </div>
-              <Button onClick={() => submitEarn('Bill upload')} disabled={!billUploaded} className="h-12 w-full text-base font-semibold gradient-primary border-0 text-primary-foreground">
-                Submit Bill
-              </Button>
-              <button onClick={() => setMethod(null)} className="w-full text-sm text-muted-foreground">Back</button>
-            </motion.div>
-          ) : method === 'code' ? (
-            <motion.div key="code" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-              <Input placeholder="Enter product code" value={productCode} onChange={(e) => setProductCode(e.target.value.toUpperCase())} className="h-12 text-center text-lg font-mono tracking-widest" />
-              <Button onClick={() => submitEarn(`Product code: ${productCode}`)} disabled={productCode.length < 4} className="h-12 w-full text-base font-semibold gradient-primary border-0 text-primary-foreground">
-                Submit Code
-              </Button>
-              <button onClick={() => setMethod(null)} className="w-full text-sm text-muted-foreground">Back</button>
-            </motion.div>
-          ) : (
-            <motion.div key="qr" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-              <div className="flex h-64 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/50">
-                <QrCode size={64} className="text-muted-foreground" />
-                <p className="mt-3 text-sm text-muted-foreground">Camera will open here</p>
-                <p className="text-xs text-muted-foreground">(Simulated)</p>
-              </div>
-              <Button onClick={() => submitEarn('QR scan')} className="h-12 w-full text-base font-semibold gradient-primary border-0 text-primary-foreground">
-                Simulate QR Scan
-              </Button>
-              <button onClick={() => setMethod(null)} className="w-full text-sm text-muted-foreground">Back</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold text-accent">+{m.points}</div>
+            </motion.button>
+          ))}
+        </div>
+
+        {active === 'bill' && (
+          <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4">
+            <Label>Upload your bill</Label>
+            <input type="file" accept="image/*,application/pdf" className="mt-2 block w-full text-sm" />
+            <Button disabled={busy} onClick={() => earn('bill', 50, 'Bill upload')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Submit & Earn 50</Button>
+          </motion.div>
+        )}
+        {active === 'code' && (
+          <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4">
+            <Label>Product Code</Label>
+            <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="ABC123XYZ" className="mt-2 h-11 uppercase tracking-wider" />
+            <Button disabled={busy || code.length < 4} onClick={() => earn('code', 30, `Code: ${code}`)} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Redeem Code</Button>
+          </motion.div>
+        )}
+        {active === 'qr' && (
+          <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4 text-center">
+            <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-secondary"><QrCode size={64} className="text-muted-foreground"/></div>
+            <p className="mt-3 text-xs text-muted-foreground">Simulated QR scan</p>
+            <Button disabled={busy} onClick={() => earn('qr', 40, 'QR scan reward')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Simulate Scan +40</Button>
+          </motion.div>
+        )}
       </div>
     </PageWrapper>
   );
