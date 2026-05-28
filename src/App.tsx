@@ -48,6 +48,7 @@ const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?
 
 const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
