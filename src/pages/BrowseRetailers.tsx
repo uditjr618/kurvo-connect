@@ -16,9 +16,9 @@ const BrowseRetailers = () => {
 
   useEffect(() => {
     (async () => {
-      // Get all retailer user_ids, then their profiles
-      const { data: roles } = await supabase.from('user_roles').select('user_id').eq('role', 'retailer');
-      const ids = (roles ?? []).map(r => r.user_id);
+      // Find retailers via products (RLS prevents reading other users' roles directly)
+      const { data: prods } = await supabase.from('products').select('retailer_id').not('retailer_id', 'is', null);
+      const ids = Array.from(new Set((prods ?? []).map(p => p.retailer_id as string)));
       if (ids.length === 0) { setRetailers([]); return; }
       const { data: profs } = await supabase.from('profiles').select('id, full_name, address, avatar_url').in('id', ids);
       setRetailers((profs as Retailer[]) ?? []);
