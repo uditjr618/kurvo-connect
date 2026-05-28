@@ -109,6 +109,45 @@ export type Database = {
         }
         Relationships: []
       }
+      complaints: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          id: string
+          message: string
+          reference_id: string | null
+          reference_type: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -280,6 +319,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_active: boolean
           phone: string | null
           points: number
           updated_at: string
@@ -290,6 +330,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          is_active?: boolean
           phone?: string | null
           points?: number
           updated_at?: string
@@ -300,6 +341,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_active?: boolean
           phone?: string | null
           points?: number
           updated_at?: string

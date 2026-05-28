@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
@@ -18,7 +18,18 @@ import BrowseRetailers from "@/pages/BrowseRetailers";
 import RetailerProducts from "@/pages/RetailerProducts";
 import CustomerOrders from "@/pages/CustomerOrders";
 import CartPage from "@/pages/CartPage";
-import AdminPanel from "@/pages/AdminPanel";
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminProducts from "@/pages/admin/AdminProducts";
+import AdminCategories from "@/pages/admin/AdminCategories";
+import AdminOrders from "@/pages/admin/AdminOrders";
+import AdminBookings from "@/pages/admin/AdminBookings";
+import AdminRequirements from "@/pages/admin/AdminRequirements";
+import AdminRewards from "@/pages/admin/AdminRewards";
+import AdminComplaints from "@/pages/admin/AdminComplaints";
+import AdminInventory from "@/pages/admin/AdminInventory";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -37,6 +48,7 @@ const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?
 
 const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
@@ -56,10 +68,20 @@ const AppRoutes = () => {
         <Route path="/shop/:shopId" element={<ProtectedRoute><RetailerProducts /></ProtectedRoute>} />
         <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
         <Route path="/my-orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPanel /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminUsers /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/products" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminProducts /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/categories" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminCategories /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminOrders /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/bookings" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/requirements" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminRequirements /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/rewards" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminRewards /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/complaints" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminComplaints /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminInventory /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/notifications" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminNotifications /></AdminLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {isAuthenticated && <BottomNav />}
+      {isAuthenticated && !useLocation().pathname.startsWith('/admin') && <BottomNav />}
     </>
   );
 };
