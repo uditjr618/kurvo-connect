@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface Notification {
   id: string;
