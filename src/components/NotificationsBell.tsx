@@ -77,11 +77,15 @@ const NotificationsBell = () => {
           {items.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications yet</p>
           ) : items.map(n => (
-            <div key={n.id} className={`border-b px-4 py-3 last:border-0 ${!n.is_read ? 'bg-primary/5' : ''}`}>
+            <button
+              key={n.id}
+              onClick={() => n.link && navigate(n.link)}
+              className={`block w-full border-b px-4 py-3 text-left last:border-0 transition-colors hover:bg-muted/50 ${!n.is_read ? 'bg-primary/5' : ''}`}
+            >
               <p className="text-sm font-medium">{n.title}</p>
               {n.body && <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>}
               <p className="mt-1 text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
-            </div>
+            </button>
           ))}
         </div>
       </PopoverContent>
