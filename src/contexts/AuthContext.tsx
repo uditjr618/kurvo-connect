@@ -38,12 +38,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Load profile + role for the current user
   const loadUserData = async (uid: string) => {
-    const [{ data: p }, { data: r }] = await Promise.all([
+    const [{ data: p }, { data: roles }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
-      supabase.from('user_roles').select('role').eq('user_id', uid).order('created_at', { ascending: true }).limit(1).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', uid),
     ]);
     setProfile(p as Profile | null);
-    setRole((r?.role as UserRole) ?? 'customer');
+    const list = (roles ?? []).map((x: any) => x.role as UserRole);
+    // Prefer admin if present, otherwise first role, else default customer
+    const chosen: UserRole = list.includes('admin')
+      ? 'admin'
+      : (list[0] ?? 'customer');
+    setRole(chosen);
   };
 
   useEffect(() => {
