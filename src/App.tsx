@@ -82,7 +82,7 @@ const AppRoutes = () => {
         <Route path="/admin/notifications" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminNotifications /></AdminLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {isAuthenticated && !useLocation().pathname.startsWith('/admin') && <BottomNav />}
+      {isAuthenticated && !isAdminRoute && <BottomNav />}
     </>
   );
 };
