@@ -30,8 +30,10 @@ const Dashboard = () => {
   ];
   const plumberActions = [
     { icon: Wrench, label: 'My Jobs', onClick: () => navigate('/plumber-jobs'), variant: 'primary' as const, delay: 0.1 },
-    { icon: Wallet, label: 'Wallet', onClick: () => navigate('/wallet'), delay: 0.15 },
-    { icon: Gift, label: 'Rewards', onClick: () => navigate('/rewards'), delay: 0.2 },
+    { icon: Store, label: 'Browse Shops', onClick: () => navigate('/shops'), delay: 0.15 },
+    { icon: ShoppingCart, label: 'My Orders', onClick: () => navigate('/my-orders'), delay: 0.2 },
+    { icon: Wallet, label: 'Wallet', onClick: () => navigate('/wallet'), delay: 0.25 },
+    { icon: Gift, label: 'Rewards', onClick: () => navigate('/rewards'), delay: 0.3 },
   ];
   const distributorActions = [
     { icon: Truck, label: 'Market', onClick: () => navigate('/market'), variant: 'primary' as const, delay: 0.1 },
