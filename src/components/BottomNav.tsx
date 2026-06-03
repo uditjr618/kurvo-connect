@@ -18,8 +18,9 @@ const BottomNav = () => {
   const plumber = [
     { path: '/dashboard', icon: Home, label: 'Home' },
     { path: '/plumber-jobs', icon: Wrench, label: 'Jobs' },
+    { path: '/shops', icon: Store, label: 'Shops' },
+    { path: '/cart', icon: ShoppingCart, label: 'Cart' },
     { path: '/wallet', icon: Wallet, label: 'Wallet' },
-    { path: '/rewards', icon: Gift, label: 'Rewards' },
   ];
   const distributor = [
     { path: '/dashboard', icon: Home, label: 'Home' },
