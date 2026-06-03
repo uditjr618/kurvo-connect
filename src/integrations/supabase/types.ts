@@ -320,6 +320,8 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           phone: string | null
           points: number
           updated_at: string
@@ -331,6 +333,8 @@ export type Database = {
           full_name?: string
           id: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           points?: number
           updated_at?: string
@@ -342,6 +346,8 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           points?: number
           updated_at?: string
