@@ -495,6 +495,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_plumbers: {
+        Args: never
+        Returns: {
+          address: string
+          avatar_url: string
+          full_name: string
+          id: string
+          latitude: number
+          longitude: number
+        }[]
+      }
     }
     Enums: {
       app_role: "customer" | "retailer" | "distributor" | "plumber" | "admin"
