@@ -558,6 +558,8 @@ export type Database = {
           id: string
           latitude: number
           longitude: number
+          phone: string
+          whatsapp_number: string
         }[]
       }
     }
