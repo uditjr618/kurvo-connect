@@ -30,6 +30,7 @@ import AdminRewards from "@/pages/admin/AdminRewards";
 import AdminComplaints from "@/pages/admin/AdminComplaints";
 import AdminInventory from "@/pages/admin/AdminInventory";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
+import AdminWhatsApp from "@/pages/admin/AdminWhatsApp";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -80,6 +81,7 @@ const AppRoutes = () => {
         <Route path="/admin/complaints" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminComplaints /></AdminLayout></ProtectedRoute>} />
         <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminInventory /></AdminLayout></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminNotifications /></AdminLayout></ProtectedRoute>} />
+        <Route path="/admin/whatsapp" element={<ProtectedRoute roles={['admin']}><AdminLayout><AdminWhatsApp /></AdminLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {isAuthenticated && !isAdminRoute && <BottomNav />}
