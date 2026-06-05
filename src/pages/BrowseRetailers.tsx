@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store as StoreIcon, MapPin, Navigation, Loader2 } from 'lucide-react';
+import { ArrowLeft, Store as StoreIcon, MapPin, Navigation, Loader2, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,10 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { getCurrentPosition, distanceKm, formatDistance, type Coords } from '@/lib/geo';
+import { openWhatsAppChat } from '@/lib/wa';
 
 interface Retailer {
   id: string; full_name: string; address: string | null; avatar_url: string | null;
   latitude: number | null; longitude: number | null;
+  phone: string | null; whatsapp_number: string | null;
 }
 
 const BrowseRetailers = () => {
@@ -36,7 +38,7 @@ const BrowseRetailers = () => {
       const ids = Array.from(new Set((prods ?? []).map(p => p.retailer_id as string)));
       if (ids.length === 0) { setRetailers([]); return; }
       const { data: profs } = await supabase.from('profiles')
-        .select('id, full_name, address, avatar_url, latitude, longitude').in('id', ids);
+        .select('id, full_name, address, avatar_url, latitude, longitude, phone, whatsapp_number').in('id', ids);
       setRetailers((profs as Retailer[]) ?? []);
     })();
   }, []);
@@ -64,6 +66,12 @@ const BrowseRetailers = () => {
       return a.distance - b.distance;
     });
 
+  const chatRetailer = (e: React.MouseEvent, r: Retailer) => {
+    e.stopPropagation();
+    const ok = openWhatsAppChat(r.whatsapp_number || r.phone, `Hi ${r.full_name}, I'm interested in your products on Kurvo.`);
+    if (!ok) toast.error('Shop has not shared a WhatsApp number');
+  };
+
   return (
     <PageWrapper>
       <div className="px-5 pt-6">
@@ -85,7 +93,9 @@ const BrowseRetailers = () => {
               </div>
             ) :
             filtered.map((r, i) => (
-              <motion.button key={r.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:i*0.04}} onClick={() => navigate(`/shop/${r.id}`)} className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left hover:border-primary/40 transition-all">
+              <motion.div key={r.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:i*0.04}}
+                onClick={() => navigate(`/shop/${r.id}`)}
+                className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left hover:border-primary/40 transition-all cursor-pointer">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><StoreIcon size={20}/></div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{r.full_name}</p>
@@ -94,7 +104,11 @@ const BrowseRetailers = () => {
                 {r.distance != null && (
                   <span className="shrink-0 rounded-full bg-accent/15 px-2 py-1 text-[10px] font-semibold text-accent-foreground">{formatDistance(r.distance)}</span>
                 )}
-              </motion.button>
+                <Button size="icon" variant="outline" onClick={(e) => chatRetailer(e, r)} title="WhatsApp chat"
+                  className="h-9 w-9 shrink-0 border-[#25D366] text-[#25D366] hover:bg-[#25D366] hover:text-white">
+                  <MessageCircle size={16}/>
+                </Button>
+              </motion.div>
             ))
           }
         </div>

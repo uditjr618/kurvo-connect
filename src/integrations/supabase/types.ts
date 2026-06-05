@@ -325,6 +325,8 @@ export type Database = {
           phone: string | null
           points: number
           updated_at: string
+          whatsapp_number: string | null
+          whatsapp_opt_in: boolean
         }
         Insert: {
           address?: string | null
@@ -338,6 +340,8 @@ export type Database = {
           phone?: string | null
           points?: number
           updated_at?: string
+          whatsapp_number?: string | null
+          whatsapp_opt_in?: boolean
         }
         Update: {
           address?: string | null
@@ -351,6 +355,8 @@ export type Database = {
           phone?: string | null
           points?: number
           updated_at?: string
+          whatsapp_number?: string | null
+          whatsapp_opt_in?: boolean
         }
         Relationships: []
       }
@@ -474,12 +480,60 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_logs: {
+        Row: {
+          body: string | null
+          created_at: string
+          error: string | null
+          id: string
+          link: string | null
+          phone: string | null
+          provider_message_id: string | null
+          status: string
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          link?: string | null
+          phone?: string | null
+          provider_message_id?: string | null
+          status?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          link?: string | null
+          phone?: string | null
+          provider_message_id?: string | null
+          status?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       create_notification: {
+        Args: {
+          _body: string
+          _link?: string
+          _title: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      dispatch_whatsapp: {
         Args: {
           _body: string
           _link?: string
@@ -504,6 +558,8 @@ export type Database = {
           id: string
           latitude: number
           longitude: number
+          phone: string
+          whatsapp_number: string
         }[]
       }
     }

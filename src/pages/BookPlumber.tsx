@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, Phone, Wrench, Navigation, Loader2, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Phone, Wrench, Navigation, Loader2, User as UserIcon, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,12 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getCurrentPosition, distanceKm, formatDistance, type Coords } from '@/lib/geo';
+import { openWhatsAppChat } from '@/lib/wa';
 
 const services = ['Leakage Fix', 'Tap Install', 'Pipe Repair', 'Drain Cleaning', 'Tank Cleaning', 'General Service'];
 
 interface Plumber {
   id: string; full_name: string; address: string | null;
   latitude: number | null; longitude: number | null;
+  phone?: string | null; whatsapp_number?: string | null;
   distance?: number | null;
 }
 
@@ -66,6 +68,12 @@ const BookPlumber = () => {
       return (a.distance as number) - (b.distance as number);
     })
     .slice(0, 5);
+
+  const chatPlumber = (p: Plumber) => {
+    const num = p.whatsapp_number || p.phone;
+    const ok = openWhatsAppChat(num, `Hi ${p.full_name || ''}, I need help with ${serviceType} at ${location || 'my location'}.`);
+    if (!ok) toast.error('Plumber has not shared a WhatsApp number');
+  };
 
   const submit = async () => {
     if (!user) return;
@@ -135,6 +143,10 @@ const BookPlumber = () => {
                     {p.distance != null && (
                       <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold">{formatDistance(p.distance)}</span>
                     )}
+                    <Button size="icon" variant="outline" onClick={() => chatPlumber(p)} title="WhatsApp chat"
+                      className="h-9 w-9 border-[#25D366] text-[#25D366] hover:bg-[#25D366] hover:text-white">
+                      <MessageCircle size={16}/>
+                    </Button>
                   </div>
                 ))}
               </div>
