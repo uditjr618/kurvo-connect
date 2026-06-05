@@ -11,6 +11,10 @@ export interface Profile {
   avatar_url: string | null;
   points: number;
   address: string | null;
+  whatsapp_number?: string | null;
+  whatsapp_opt_in?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface AuthContextType {
@@ -20,7 +24,7 @@ interface AuthContextType {
   role: UserRole | null;
   loading: boolean;
   isAuthenticated: boolean;
-  signUp: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, fullName: string, role: UserRole, whatsappNumber?: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -36,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load profile + role for the current user
   const loadUserData = async (uid: string) => {
     const [{ data: p }, { data: roles }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
@@ -44,28 +47,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ]);
     setProfile(p as Profile | null);
     const list = (roles ?? []).map((x: any) => x.role as UserRole);
-    // Prefer admin if present, otherwise first role, else default customer
-    const chosen: UserRole = list.includes('admin')
-      ? 'admin'
-      : (list[0] ?? 'customer');
+    const chosen: UserRole = list.includes('admin') ? 'admin' : (list[0] ?? 'customer');
     setRole(chosen);
   };
 
   useEffect(() => {
-    // 1) Listener first
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
-      if (sess?.user) {
-        // Defer DB calls to avoid deadlock
-        setTimeout(() => loadUserData(sess.user.id), 0);
-      } else {
-        setProfile(null);
-        setRole(null);
-      }
+      if (sess?.user) setTimeout(() => loadUserData(sess.user.id), 0);
+      else { setProfile(null); setRole(null); }
     });
 
-    // 2) Then check existing session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
@@ -76,13 +69,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, signupRole: UserRole) => {
+  const signUp = async (email: string, password: string, fullName: string, signupRole: UserRole, whatsappNumber?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: fullName, role: signupRole },
+        data: {
+          full_name: fullName,
+          role: signupRole,
+          whatsapp_number: whatsappNumber ? whatsappNumber.replace(/[^\d]/g, '') : null,
+        },
       },
     });
     return error ? { error: error.message } : {};
@@ -98,13 +95,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin + '/dashboard' });
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const signOut = async () => { await supabase.auth.signOut(); };
 
-  const refreshProfile = async () => {
-    if (user) await loadUserData(user.id);
-  };
+  const refreshProfile = async () => { if (user) await loadUserData(user.id); };
 
   return (
     <AuthContext.Provider
