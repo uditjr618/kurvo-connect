@@ -5,7 +5,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard, Users, Store, Truck, Wrench, Package, Tag, ShoppingBag,
-  CalendarCheck, Gift, MessageSquareWarning, Boxes, ArrowLeftCircle, Bell, MessageCircle,
+  CalendarCheck, Gift, MessageSquareWarning, Boxes, ArrowLeftCircle, Bell,
 } from 'lucide-react';
 
 const groups = [
@@ -40,7 +40,7 @@ const groups = [
       { url: '/admin/requirements', icon: Truck, title: 'Requirements' },
       { url: '/admin/complaints', icon: MessageSquareWarning, title: 'Complaints' },
       { url: '/admin/notifications', icon: Bell, title: 'Notifications' },
-      { url: '/admin/whatsapp', icon: MessageCircle, title: 'WhatsApp' },
+      
     ],
   },
 ];

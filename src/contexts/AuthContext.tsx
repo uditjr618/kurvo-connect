@@ -11,8 +11,6 @@ export interface Profile {
   avatar_url: string | null;
   points: number;
   address: string | null;
-  whatsapp_number?: string | null;
-  whatsapp_opt_in?: boolean;
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -24,7 +22,7 @@ interface AuthContextType {
   role: UserRole | null;
   loading: boolean;
   isAuthenticated: boolean;
-  signUp: (email: string, password: string, fullName: string, role: UserRole, whatsappNumber?: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -69,17 +67,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, signupRole: UserRole, whatsappNumber?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, signupRole: UserRole) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: {
-          full_name: fullName,
-          role: signupRole,
-          whatsapp_number: whatsappNumber ? whatsappNumber.replace(/[^\d]/g, '') : null,
-        },
+        data: { full_name: fullName, role: signupRole },
       },
     });
     return error ? { error: error.message } : {};
