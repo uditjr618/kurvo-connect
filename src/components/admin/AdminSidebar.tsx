@@ -40,7 +40,7 @@ const groups = [
       { url: '/admin/requirements', icon: Truck, title: 'Requirements' },
       { url: '/admin/complaints', icon: MessageSquareWarning, title: 'Complaints' },
       { url: '/admin/notifications', icon: Bell, title: 'Notifications' },
-      { url: '/admin/whatsapp', icon: MessageCircle, title: 'WhatsApp' },
+      
     ],
   },
 ];

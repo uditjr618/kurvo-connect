@@ -23,7 +23,7 @@ const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
+  
   const [role, setRole] = useState<UserRole>('customer');
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +38,7 @@ const AuthPage = () => {
         navigate('/dashboard');
       } else {
         if (!fullName.trim()) return toast.error('Please enter your name');
-        const { error } = await signUp(email, password, fullName.trim(), role, whatsapp.trim() || undefined);
+        const { error } = await signUp(email, password, fullName.trim(), role);
         if (error) return toast.error(error);
         toast.success('Account created! You can now sign in.');
         setMode('signin');
@@ -69,11 +69,6 @@ const AuthPage = () => {
                 <div>
                   <Label htmlFor="name">Full Name</Label>
                   <Input id="name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your name" className="mt-1.5 h-11" />
-                </div>
-                <div>
-                  <Label htmlFor="wa">WhatsApp Number</Label>
-                  <Input id="wa" type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="e.g. 919876543210 (with country code)" className="mt-1.5 h-11" />
-                  <p className="mt-1 text-[11px] text-muted-foreground">We'll send order, booking & reward updates here.</p>
                 </div>
                 <div>
                   <Label className="mb-2 block">I am a...</Label>
