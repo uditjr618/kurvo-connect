@@ -4,7 +4,7 @@ import { ArrowLeft, MapPin, Calendar, Check, X, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { awardPoints, notifySelf } from '@/lib/api';
+import { earnPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,16 +24,18 @@ const PlumberJobs = () => {
 
   useEffect(() => { load(); }, []);
 
-  const update = async (id: string, status: string, reward = 0) => {
+  const update = async (id: string, status: string, earn = false) => {
     if (!user) return;
     const patch: { status: string; plumber_id?: string } = { status };
     if (status === 'accepted') patch.plumber_id = user.id;
     const { error } = await supabase.from('bookings').update(patch).eq('id', id);
     if (error) return toast.error(error.message);
-    if (reward > 0) {
-      await awardPoints(user.id, reward, 'Plumber job completed');
-      await notifySelf(`+${reward} points`, 'Job completed successfully');
-      await refreshProfile();
+    if (earn) {
+      try {
+        const amt = await earnPoints('plumber_complete');
+        await notifySelf(`+${amt} points`, 'Job completed successfully');
+        await refreshProfile();
+      } catch (e: any) { toast.error(e?.message || 'Points failed'); }
     }
     toast.success(`Job ${status}`);
     load();
@@ -70,7 +72,7 @@ const PlumberJobs = () => {
                     <Button size="sm" variant="outline" onClick={() => update(j.id, 'rejected')} className="flex-1"><X size={14} className="mr-1"/>Reject</Button>
                   </>}
                   {j.status === 'accepted' && j.plumber_id === user?.id && (
-                    <Button size="sm" onClick={() => update(j.id, 'completed', 100)} className="flex-1 gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Complete (+100)</Button>
+                    <Button size="sm" onClick={() => update(j.id, 'completed', true)} className="flex-1 gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Complete (+100)</Button>
                   )}
                 </div>
               </motion.div>

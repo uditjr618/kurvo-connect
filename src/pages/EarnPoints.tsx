@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, QrCode, Hash, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { awardPoints, notifySelf } from '@/lib/api';
+import { earnPoints, notifySelf, type EarnAction } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,17 +23,17 @@ const EarnPoints = () => {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const earn = async (id: string, amount: number, desc: string) => {
+  const earn = async (action: EarnAction, desc: string) => {
     if (!user) return;
     setBusy(true);
     try {
-      await awardPoints(user.id, amount, desc);
+      const amount = await earnPoints(action);
       await notifySelf(`+${amount} points earned`, desc);
       await refreshProfile();
       toast.success(`+${amount} points earned!`);
       setActive(null); setCode('');
-    } catch (e) {
-      toast.error('Failed to earn points');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to earn points');
     } finally { setBusy(false); }
   };
 
@@ -66,21 +66,21 @@ const EarnPoints = () => {
           <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4">
             <Label>Upload your bill</Label>
             <input type="file" accept="image/*,application/pdf" className="mt-2 block w-full text-sm" />
-            <Button disabled={busy} onClick={() => earn('bill', 50, 'Bill upload')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Submit & Earn 50</Button>
+            <Button disabled={busy} onClick={() => earn('bill_upload', 'Bill upload')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Submit & Earn 50</Button>
           </motion.div>
         )}
         {active === 'code' && (
           <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4">
             <Label>Product Code</Label>
             <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="ABC123XYZ" className="mt-2 h-11 uppercase tracking-wider" />
-            <Button disabled={busy || code.length < 4} onClick={() => earn('code', 30, `Code: ${code}`)} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Redeem Code</Button>
+            <Button disabled={busy || code.length < 4} onClick={() => earn('product_code', `Code: ${code}`)} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Redeem Code</Button>
           </motion.div>
         )}
         {active === 'qr' && (
           <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-5 rounded-2xl border bg-card p-4 text-center">
             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-secondary"><QrCode size={64} className="text-muted-foreground"/></div>
             <p className="mt-3 text-xs text-muted-foreground">Simulated QR scan</p>
-            <Button disabled={busy} onClick={() => earn('qr', 40, 'QR scan reward')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Simulate Scan +40</Button>
+            <Button disabled={busy} onClick={() => earn('qr_scan', 'QR scan reward')} className="mt-4 w-full gradient-primary border-0 text-primary-foreground"><Sparkles className="mr-1.5" size={16}/>Simulate Scan +40</Button>
           </motion.div>
         )}
       </div>
