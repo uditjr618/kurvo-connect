@@ -20,7 +20,8 @@ const RetailerProducts = () => {
 
   useEffect(() => {
     if (!shopId) return;
-    supabase.from('profiles').select('full_name').eq('id', shopId).single().then(({ data }) => setShopName(data?.full_name ?? 'Shop'));
+    (supabase as any).rpc('get_profile_basics', { _ids: [shopId] })
+      .then(({ data }: any) => setShopName(data?.[0]?.full_name ?? 'Shop'));
     supabase.from('products').select('*').eq('retailer_id', shopId).eq('is_available', true).then(({ data }) => setProducts((data as Product[]) ?? []));
   }, [shopId]);
 

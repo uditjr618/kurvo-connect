@@ -488,6 +488,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      earn_points: { Args: { _action: string }; Returns: number }
+      get_profile_basics: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -504,9 +513,24 @@ export type Database = {
           id: string
           latitude: number
           longitude: number
-          phone: string
         }[]
       }
+      list_retailers: {
+        Args: never
+        Returns: {
+          address: string
+          avatar_url: string
+          full_name: string
+          id: string
+          latitude: number
+          longitude: number
+        }[]
+      }
+      notify_self: {
+        Args: { _body?: string; _link?: string; _title: string }
+        Returns: undefined
+      }
+      redeem_reward: { Args: { _reward_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "customer" | "retailer" | "distributor" | "plumber" | "admin"

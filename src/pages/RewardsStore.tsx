@@ -4,7 +4,7 @@ import { ArrowLeft, Gift, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { awardPoints, notifySelf } from '@/lib/api';
+import { redeemReward, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,10 +27,12 @@ const RewardsStore = () => {
     if (profile.points < r.points_cost) return toast.error('Not enough points');
     setBusy(r.id);
     try {
-      await awardPoints(user.id, -r.points_cost, `Redeemed: ${r.title}`);
+      await redeemReward(r.id);
       await notifySelf('Reward Redeemed', r.title);
       await refreshProfile();
       toast.success(`Redeemed ${r.title}!`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Redeem failed');
     } finally { setBusy(null); }
   };
 

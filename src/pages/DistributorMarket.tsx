@@ -4,7 +4,7 @@ import { ArrowLeft, Truck, Check, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { awardPoints, notifySelf } from '@/lib/api';
+import { earnPoints, notifySelf, getProfileBasics } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -22,12 +22,12 @@ const DistributorMarket = () => {
     const { data } = await supabase.from('requirements').select('*').order('created_at',{ascending:false});
     const list = (data as Requirement[]) ?? [];
     setReqs(list);
-    // Fetch names
+    // Fetch names via safe RPC
     const ids = [...new Set(list.map(r => r.retailer_id))];
     if (ids.length) {
-      const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+      const m = await getProfileBasics(ids);
       const map: Record<string,string> = {};
-      (profs ?? []).forEach(p => { map[p.id] = p.full_name; });
+      m.forEach((v, k) => { map[k] = v.full_name; });
       setRetailerNames(map);
     }
   };
@@ -42,10 +42,13 @@ const DistributorMarket = () => {
   const fulfill = async (id: string) => {
     if (!user) return;
     await supabase.from('requirements').update({ status: 'fulfilled' }).eq('id', id);
-    await awardPoints(user.id, 20, 'Requirement fulfilled');
-    await notifySelf('+20 points', 'Requirement fulfilled');
-    await refreshProfile();
-    toast.success('Fulfilled! +20 points'); load();
+    try {
+      const amt = await earnPoints('requirement_fulfilled');
+      await notifySelf(`+${amt} points`, 'Requirement fulfilled');
+      await refreshProfile();
+      toast.success(`Fulfilled! +${amt} points`);
+    } catch (e: any) { toast.error(e?.message || 'Points failed'); }
+    load();
   };
 
   return (

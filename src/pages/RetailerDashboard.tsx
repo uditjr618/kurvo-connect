@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Trash2, Package, ClipboardList, ShoppingBag, Sparkles,
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { awardPoints, notifySelf } from '@/lib/api';
+import { earnPoints, notifySelf } from '@/lib/api';
 import PageWrapper from '@/components/PageWrapper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -66,10 +66,16 @@ const RetailerDashboard = () => {
     toast.success('Requirement posted'); setROpen(false); setNewR({product_name:'',quantity:'',urgency:'normal',notes:''}); load();
   };
 
-  const updateOrder = async (id: string, status: string, reward = 0) => {
+  const updateOrder = async (id: string, status: string, earn = false) => {
     if (!user) return;
     await supabase.from('orders').update({ status }).eq('id', id);
-    if (reward > 0) { await awardPoints(user.id, reward, `Order ${id.slice(0,8)} delivered`); await notifySelf(`+${reward} points`, 'Order delivered'); await refreshProfile(); }
+    if (earn) {
+      try {
+        const amt = await earnPoints('order_delivered');
+        await notifySelf(`+${amt} points`, 'Order delivered');
+        await refreshProfile();
+      } catch (e: any) { toast.error(e?.message || 'Points failed'); }
+    }
     toast.success(`Order ${status}`); load();
   };
 
@@ -129,7 +135,7 @@ const RetailerDashboard = () => {
                       <Button size="sm" onClick={()=>updateOrder(o.id, 'accepted')} className="flex-1 gradient-primary border-0 text-primary-foreground">Accept</Button>
                       <Button size="sm" variant="outline" onClick={()=>updateOrder(o.id, 'rejected')} className="flex-1">Reject</Button>
                     </>}
-                    {o.status==='accepted' && <Button size="sm" onClick={()=>updateOrder(o.id,'delivered',50)} className="w-full gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Delivered (+50)</Button>}
+                    {o.status==='accepted' && <Button size="sm" onClick={()=>updateOrder(o.id,'delivered',true)} className="w-full gradient-accent border-0 text-accent-foreground"><Sparkles size={14} className="mr-1"/>Mark Delivered (+50)</Button>}
                     {(o.status==='delivered'||o.status==='rejected') && <span className="text-xs text-muted-foreground"><Check size={12} className="inline mr-1"/>{o.status}</span>}
                   </div>
                 </motion.div>
