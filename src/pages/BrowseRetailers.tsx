@@ -14,7 +14,6 @@ import { getCurrentPosition, distanceKm, formatDistance, type Coords } from '@/l
 interface Retailer {
   id: string; full_name: string; address: string | null; avatar_url: string | null;
   latitude: number | null; longitude: number | null;
-  phone: string | null;
 }
 
 const BrowseRetailers = () => {
@@ -33,12 +32,8 @@ const BrowseRetailers = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: prods } = await supabase.from('products').select('retailer_id').not('retailer_id', 'is', null);
-      const ids = Array.from(new Set((prods ?? []).map(p => p.retailer_id as string)));
-      if (ids.length === 0) { setRetailers([]); return; }
-      const { data: profs } = await supabase.from('profiles')
-        .select('id, full_name, address, avatar_url, latitude, longitude, phone').in('id', ids);
-      setRetailers((profs as Retailer[]) ?? []);
+      const { data } = await (supabase as any).rpc('list_retailers');
+      setRetailers((data as Retailer[]) ?? []);
     })();
   }, []);
 
